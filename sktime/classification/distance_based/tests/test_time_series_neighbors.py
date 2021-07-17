@@ -4,8 +4,10 @@ from sktime.classification.distance_based._time_series_neighbors import (
     KNeighborsTimeSeriesClassifier,
 )
 from sktime.datasets import load_arrow_head
+import pytest
 
-distance_functions = [
+
+DISTANCE_FUNCTIONS = [
     "euclidean",
     "dtw",
     "wdtw",
@@ -24,7 +26,7 @@ distance_functions = [
 # Distance measure  LCSSDistance -e "0.05" -ws "3" gets 137 correct out of 175,
 # but one tie, so expect 136 since sktime picks the first
 
-expected_correct = {
+EXPECTED_CORRECT = {
     "euclidean": 140,
     "dtw": 123,
     "wdtw": 130,
@@ -34,18 +36,26 @@ expected_correct = {
 }
 
 
-def test_knn_on_arrowhead():
+@pytest.mark.parametrize(
+    "distance_function,expected_correct",
+    [
+        (distance_function, EXPECTED_CORRECT[distance_function])
+        for distance_function in EXPECTED_CORRECT
+    ],
+    ids=DISTANCE_FUNCTIONS,
+)
+def test_knn_on_arrowhead(distance_function, expected_correct):
     # load arrowhead data for unit tests
     X_train, y_train = load_arrow_head(split="train", return_X_y=True)
     X_test, y_test = load_arrow_head(split="test", return_X_y=True)
-    for i in range(0, len(distance_functions)):
-        knn = KNeighborsTimeSeriesClassifier(
-            distance=distance_functions[i],
-        )
-        knn.fit(X_train, y_train)
-        pred = knn.predict(X_test)
-        correct = 0
-        for j in range(0, len(pred)):
-            if pred[j] == y_test[j]:
-                correct = correct + 1
-        assert correct == expected_correct[distance_functions[i]]
+
+    knn = KNeighborsTimeSeriesClassifier(
+        distance=distance_function,
+    )
+    knn.fit(X_train, y_train)
+    pred = knn.predict(X_test)
+    correct = 0
+    for j in range(0, len(pred)):
+        if pred[j] == y_test[j]:
+            correct = correct + 1
+    assert correct == expected_correct
